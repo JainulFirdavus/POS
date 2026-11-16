@@ -1,0 +1,24 @@
+
+import { StrictMode } from 'react';
+import { createRoot } from 'react-dom/client';
+import { HashRouter } from 'react-router-dom';
+import { AuthProvider } from './context/AuthContext';
+import { SettingsProvider } from './context/SettingsContext';
+import { ToastProvider } from './context/ToastContext';
+import App from './App';
+import './index.css';
+
+createRoot(document.getElementById('root')).render(
+  <StrictMode>
+    <HashRouter>
+      <ToastProvider>
+        <SettingsProvider>
+          <AuthProvider>
+            <App />
+          </AuthProvider>
+        </SettingsProvider>
+      </ToastProvider>
+    </HashRouter>
+  </StrictMode>,
+);
+

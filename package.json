@@ -1,0 +1,29 @@
+{
+  "name": "smart-pos",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "main": "electron/main.js",
+  "workspaces": [
+    "server",
+    "client"
+  ],
+  "scripts": {
+    "dev": "concurrently -k -n server,client -c blue,magenta \"npm run dev -w server\" \"npm run dev -w client\"",
+    "build": "npm run build -w client",
+    "start": "npm run build && npm start -w server",
+    "app": "npm run build && electron .",
+    "app:dev": "concurrently -k -n server,client,electron -c blue,magenta,green \"npm run dev -w server\" \"npm run dev -w client\" \"wait-on http://localhost:5173 tcp:4000 && cross-env POS_DEV=1 electron .\""
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2",
+    "cross-env": "^7.0.3",
+    "electron": "^36.3.2",
+    "wait-on": "^8.0.3"
+  }
+} 
+
+
+
+
+
