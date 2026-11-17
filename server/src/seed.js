@@ -58,8 +58,8 @@ export async function seedIfEmpty() {
 
   await User.create([
     { name: 'Store Admin', username: 'admin', role: 'admin', color: '#6366f1', secretHash: await bcrypt.hash('admin123', 10) },
-    { name: 'Priya', username: 'priya', role: 'cashier', color: '#10b981', secretHash: await bcrypt.hash('1234', 10) },
-    { name: 'Rahul', username: 'rahul', role: 'cashier', color: '#3b82f6', secretHash: await bcrypt.hash('5678', 10) },
+    { name: 'Firdavus', username: 'firdavus', role: 'cashier', color: '#10b981', secretHash: await bcrypt.hash('1234', 10) },
+    { name: 'Suhain', username: 'suhain', role: 'cashier', color: '#3b82f6', secretHash: await bcrypt.hash('5678', 10) },
   ]);
 
   let n = 1;
@@ -100,6 +100,6 @@ export async function seedIfEmpty() {
 
   console.log('\nSeeded demo data:');
   console.log('  Admin login   -> username: admin  password: admin123');
-  console.log('  Seller logins -> Priya PIN 1234, Rahul PIN 5678\n');
+  console.log('  Seller logins -> Firdavus PIN 1234, Suhain PIN 5678\n');
 }
  
