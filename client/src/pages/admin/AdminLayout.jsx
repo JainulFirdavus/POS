@@ -1,7 +1,7 @@
 
 import { AnimatePresence, motion } from 'framer-motion';
 import { NavLink, Link, useLocation, useOutlet } from 'react-router-dom';
-import { CreditCard, FileDown, LayoutDashboard, LayoutTemplate, LogOut, Mail, Megaphone, Monitor, Nfc, Package, Printer, Receipt, Settings, ShoppingCart, Users, Vault } from 'lucide-react';
+import { CreditCard, FileDown, Grid3x3, LayoutDashboard, LayoutTemplate, LogOut, Mail, Megaphone, Monitor, Nfc, Package, Printer, Receipt, Settings, ShoppingCart, Users, Vault } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useSettings } from '../../context/SettingsContext';
 
@@ -10,6 +10,7 @@ const NAV = [
   { to: '/admin/products', label: 'Products & Stock', icon: Package },
   { to: '/admin/invoices', label: 'Invoices', icon: Receipt },
   { to: '/admin/dine-in', label: 'Dine-in & RFID', icon: Nfc },
+  { to: '/admin/floor', label: 'Floor Plan & Buzzers', icon: Grid3x3 },
   { to: '/admin/drawer', label: 'Cash Drawer', icon: Vault },
   { to: '/admin/reports', label: 'Reports & Export', icon: FileDown },
   { to: '/admin/promotions', label: 'Promotions', icon: Megaphone },

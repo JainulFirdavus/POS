@@ -195,9 +195,90 @@ export const RfidCard = model(
       label: { type: String, required: true, trim: true, maxlength: 40 },
       color: { type: String, default: '#f59e0b' },
       active: { type: Boolean, default: true },
+      // Created automatically for a floor-plan table that has no physical card; the table itself is tapped on screen.
+      virtual: { type: Boolean, default: false },
     },
     { timestamps: true },
   ),
+);
+
+// ---- Floor plan ----
+// Each area (an indoor room, a big hall, an outdoor terrace) is a grid of cells. Fixtures such as walls,
+// doors and the kitchen fill single cells; tables cover one or more cells.
+export const AREA_KINDS = ['indoor', 'outdoor'];
+export const DECOR_TYPES = ['wall', 'window', 'door', 'counter', 'kitchen', 'cashier', 'plant', 'stage', 'restroom', 'umbrella'];
+export const GRID_MIN = 4;
+export const GRID_MAX = 30;
+
+export const FloorArea = model(
+  'FloorArea',
+  new Schema(
+    {
+      name: { type: String, required: true, trim: true, maxlength: 40 },
+      kind: { type: String, enum: AREA_KINDS, default: 'indoor' },
+      cols: { type: Number, default: 10, min: GRID_MIN, max: GRID_MAX },
+      rows: { type: Number, default: 10, min: GRID_MIN, max: GRID_MAX },
+      decor: [new Schema({ x: Number, y: Number, type: { type: String, enum: DECOR_TYPES } }, { _id: false })],
+      order: { type: Number, default: 0 },
+    },
+    { timestamps: true },
+  ),
+);
+
+const diningTableSchema = new Schema(
+  {
+    area: { type: Schema.Types.ObjectId, ref: 'FloorArea', required: true, index: true },
+    name: { type: String, required: true, trim: true, maxlength: 20, unique: true },
+    x: { type: Number, required: true, min: 0 },
+    y: { type: Number, required: true, min: 0 },
+    w: { type: Number, default: 1, min: 1, max: 6 },
+    h: { type: Number, default: 1, min: 1, max: 6 },
+    shape: { type: String, enum: ['square', 'round'], default: 'square' },
+    seats: { type: Number, default: 4, min: 1, max: 30 },
+    // The card that opens this table's tab (a physical RFID card, or a virtual one created for the table).
+    card: { type: Schema.Types.ObjectId, ref: 'RfidCard', default: null },
+    // ID of the call button / buzzer device fixed to this table.
+    buzzer: { type: String, trim: true, uppercase: true, maxlength: 40, set: emptyToUndefined },
+  },
+  { timestamps: true },
+);
+diningTableSchema.index({ card: 1 }, { unique: true, partialFilterExpression: { card: { $type: 'objectId' } } });
+diningTableSchema.index({ buzzer: 1 }, { unique: true, partialFilterExpression: { buzzer: { $type: 'string' } } });
+export const DiningTable = model('DiningTable', diningTableSchema);
+
+// A guest pressed "call waiter" or "bill" on a table buzzer (or staff raised it by hand).
+// `active` stays true until the call is done or cancelled; one active call per table and type.
+const tableCallSchema = new Schema(
+  {
+    table: { type: Schema.Types.ObjectId, ref: 'DiningTable', required: true },
+    tableName: String,
+    area: { type: Schema.Types.ObjectId, ref: 'FloorArea' },
+    areaName: String,
+    type: { type: String, enum: ['waiter', 'bill'], required: true },
+    source: { type: String, enum: ['buzzer', 'staff'], default: 'buzzer' },
+    device: String,
+    status: { type: String, enum: ['open', 'ack', 'done', 'cancelled'], default: 'open' },
+    active: { type: Boolean, default: true },
+    presses: { type: Number, default: 1 },
+    lastPressAt: { type: Date, default: Date.now },
+    ackAt: Date,
+    ackBy: String,
+    doneAt: Date,
+    doneBy: String,
+  },
+  { timestamps: true },
+);
+tableCallSchema.index({ table: 1, type: 1 }, { unique: true, partialFilterExpression: { active: true } });
+tableCallSchema.index({ createdAt: -1 });
+export const TableCall = model('TableCall', tableCallSchema);
+
+// Shared secret the buzzer devices send. Kept apart from Setting because GET /api/settings is public.
+export const BuzzerConfig = model(
+  'BuzzerConfig',
+  new Schema({
+    enabled: { type: Boolean, default: true },
+    key: { type: String, required: true },
+  }),
 );
 
 const tabItemSchema = new Schema(

@@ -6,6 +6,7 @@ import { HttpError, round2 } from '../utils.js';
 import { priceSale, releaseStock, reserveStock, resolveItems, saveInvoice } from '../sales.js';
 import { afterSale } from '../hardware.js';
 import { normUid } from './rfid.js';
+import { finishCallsForCard } from '../calls.js';
 
 const r = Router();
 r.use(auth);
@@ -142,6 +143,7 @@ r.post('/:id/checkout', async (req, res) => {
   const io = req.app.get('io');
   io.emit('invoices:changed');
   changed(req);
+  await finishCallsForCard(io, tab.card, req.user.name);
   const hardware = await afterSale(io, invoice, req.user);
   res.status(201).json({ ...invoice.toJSON(), hardware });
 });
@@ -158,6 +160,7 @@ r.post('/:id/cancel', async (req, res) => {
   if (!cancelled) throw new HttpError(409, 'This tab was already closed');
   await releaseStock(cancelled.items);
   changed(req, true);
+  await finishCallsForCard(req.app.get('io'), cancelled.card, req.user.name);
   res.json(cancelled);
 });
 
@@ -190,6 +193,8 @@ r.post('/:id/merge', async (req, res) => {
     throw new HttpError(409, `${target.label} was closed meanwhile`);
   }
   changed(req);
+  // The other table's guests moved over, so its calls are moved too: they are now this table's to answer.
+  await finishCallsForCard(req.app.get('io'), source.card, req.user.name);
   res.json(updated);
 });
 

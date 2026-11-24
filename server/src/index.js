@@ -23,6 +23,9 @@ import hardwareRoutes from './routes/hardware.js';
 import rfidRoutes from './routes/rfid.js';
 import tabRoutes from './routes/tabs.js';
 import mailRoutes from './routes/mail.js';
+import floorRoutes from './routes/floor.js';
+import callRoutes from './routes/calls.js';
+import buzzerRoutes from './routes/buzzer.js';
 import { startDailyReportScheduler } from './dailyReport.js';
 
 const app = express();
@@ -51,6 +54,9 @@ app.use('/api/hardware', hardwareRoutes);
 app.use('/api/rfid', rfidRoutes);
 app.use('/api/tabs', tabRoutes);
 app.use('/api/mail', mailRoutes);
+app.use('/api/floor', floorRoutes);
+app.use('/api/calls', callRoutes);
+app.use('/api/buzzer', buzzerRoutes);
 app.use('/api', (_req, res) => res.status(404).json({ error: 'Not found' }));
 
 const dist = path.resolve(import.meta.dirname, '../../client/dist');

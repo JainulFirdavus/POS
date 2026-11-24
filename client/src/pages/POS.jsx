@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import {
-  LayoutDashboard, LogOut, MessageSquare, Minus, Monitor, Package, Percent, Plus, Printer, Search, Send, ShoppingBag, Star, Trash2, UtensilsCrossed, Vault, X,
+  Grid3x3, LayoutDashboard, LogOut, MessageSquare, Minus, Monitor, Package, Percent, Plus, Printer, Search, Send, ShoppingBag, Star, Trash2, UtensilsCrossed, Vault, X,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useSettings } from '../context/SettingsContext';
@@ -19,6 +19,7 @@ import { PrintPortal, ReceiptPaper } from '../components/Receipt';
 import { Segmented, onColor } from '../components/ui';
 import { MergeTabModal, NoSaleModal, OpenTabModal, SplitTabModal, TabPanel, TabsModal, tabCount, tabSubtotal } from '../components/DineIn';
 import { looksLikeCard, normUid, useCardScanner } from '../lib/rfid';
+import { CALL_META, FloorModal, playChime, useFloorData } from '../components/FloorPlan';
 
 const QUICK_MESSAGES = [
   'Please wait a moment',
@@ -397,6 +398,8 @@ export default function POS() {
   const [newTabCard, setNewTabCard] = useState(null);
   const [splitOpen, setSplitOpen] = useState(false);
   const [mergeOpen, setMergeOpen] = useState(false);
+  const [floorOpen, setFloorOpen] = useState(false);
+  const floor = useFloorData();
   const defaultOrderType = settings.defaultOrderType || 'dine-in';
   const [orderType, setOrderType] = useState(defaultOrderType);
   const layout = { ...LAYOUT_DEFAULTS, ...settings.posLayout };
@@ -430,6 +433,17 @@ export default function POS() {
     s.on('tabs:changed', loadTabs);
     return () => s.off('tabs:changed', loadTabs);
   }, [loadTabs]);
+
+  // Table buzzers: every register chimes and shows who is calling.
+  useEffect(() => {
+    const s = getSocket();
+    const onCall = (c) => {
+      playChime(c.type);
+      toast(`${CALL_META[c.type]?.emoji ?? '🔔'} ${c.tableName}: ${CALL_META[c.type]?.label ?? 'Call'}${c.repeat ? ` (pressed ${c.presses}×)` : ''}`, c.type === 'bill' ? 'info' : 'error');
+    };
+    s.on('call:new', onCall);
+    return () => s.off('call:new', onCall);
+  }, [toast]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -511,6 +525,7 @@ export default function POS() {
     try {
       const { card, tab: existing } = await api(`/rfid/lookup/${encodeURIComponent(normUid(raw))}`);
       setTabsOpen(false);
+      setFloorOpen(false);
       if (existing) {
         setTab(existing);
         toast(`${card.label} loaded`, 'success');
@@ -580,7 +595,13 @@ export default function POS() {
     }
   };
 
-  const anyModal = payMethod || receipt || customItemOpen || msgOpen || discOpen || noSaleOpen || newTabCard || tabsOpen || splitOpen || mergeOpen;
+  // Floor plan: tapping a table works like tapping its card.
+  const openTable = (table) => {
+    if (!table.card) return toast(`${table.name} has no card linked. Link one in Admin → Floor Plan.`, 'error');
+    handleCard(table.card.uid);
+  };
+
+  const anyModal = payMethod || receipt || customItemOpen || msgOpen || discOpen || noSaleOpen || newTabCard || tabsOpen || splitOpen || mergeOpen || floorOpen;
   useCardScanner(handleCard, !(payMethod || receipt || customItemOpen || msgOpen || discOpen || noSaleOpen || newTabCard || splitOpen || mergeOpen));
   useEffect(() => {
     const onKey = (e) => {
@@ -647,6 +668,14 @@ export default function POS() {
           <button title="Dine-in tabs (tap an RFID card)" onClick={() => setTabsOpen(true)} className="btn btn-ghost relative px-3">
             <UtensilsCrossed size={18} /> <span className="hidden xl:inline">Dine-in</span>
             {openTabs.length > 0 && <span className="absolute -right-1 -top-1 grid h-5 min-w-5 place-items-center rounded-full bg-amber-500 px-1 text-[11px] font-bold text-amber-950">{openTabs.length}</span>}
+          </button>
+          <button
+            title={floor.calls.length ? `${floor.calls.length} table call(s) waiting` : 'Floor plan & table calls'}
+            onClick={() => setFloorOpen(true)}
+            className={`btn relative px-3 ${floor.calls.length ? 'animate-pulse bg-rose-500/20 text-rose-300 ring-1 ring-rose-400/50 hover:bg-rose-500/30' : 'btn-ghost'}`}
+          >
+            <Grid3x3 size={18} /> <span className="hidden xl:inline">Floor</span>
+            {floor.calls.length > 0 && <span className="absolute -right-1 -top-1 grid h-5 min-w-5 place-items-center rounded-full bg-rose-500 px-1 text-[11px] font-bold text-white">{floor.calls.length}</span>}
           </button>
           <button title="Open cash drawer (No sale)" onClick={() => setNoSaleOpen(true)} className="btn btn-ghost px-3"><Vault size={18} /></button>
           <button title="Message customer (F9)" onClick={() => setMsgOpen(true)} className="btn btn-ghost px-3"><MessageSquare size={18} /></button>
@@ -767,6 +796,7 @@ export default function POS() {
       <MessageModal open={msgOpen} onClose={() => setMsgOpen(false)} />
       <TabsModal open={tabsOpen} onClose={() => setTabsOpen(false)} tabs={openTabs} onSelect={(t) => { setTab(t); setTabsOpen(false); }} />
       <OpenTabModal card={newTabCard} onClose={() => setNewTabCard(null)} onOpened={(t) => { setTab(t); setNewTabCard(null); toast(`${t.label} tab opened`, 'success'); }} />
+      <FloorModal open={floorOpen} onClose={() => setFloorOpen(false)} floor={floor} tabs={openTabs} onTableClick={openTable} />
       <NoSaleModal open={noSaleOpen} onClose={() => setNoSaleOpen(false)} />
       <SplitTabModal open={splitOpen} tab={tab} tabs={openTabs} onClose={() => setSplitOpen(false)} onDone={(r) => { setTab(r.source.status === 'open' ? r.source : r.target); setSplitOpen(false); }} />
       <MergeTabModal open={mergeOpen} tab={tab} tabs={openTabs} onClose={() => setMergeOpen(false)} onDone={(t) => { setTab(t); setMergeOpen(false); }} />

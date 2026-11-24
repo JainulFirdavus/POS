@@ -122,7 +122,10 @@ function CardRow({ card, onChanged }) {
           </div>
         )}
       </td>
-      <td className="td font-mono text-xs text-slate-400">{card.uid}</td>
+      <td className="td font-mono text-xs text-slate-400">
+        {card.virtual ? <span className="font-sans text-slate-500">On-screen table (no card)</span> : card.uid}
+        {card.table && <div className="font-sans text-[11px] text-indigo-300">Floor plan: {card.table}</div>}
+      </td>
       <td className="td">
         {card.openTab ? <span className="rounded-lg bg-amber-500/15 px-2 py-0.5 text-xs font-semibold text-amber-300">In use</span> : <span className="rounded-lg bg-emerald-500/10 px-2 py-0.5 text-xs font-semibold text-emerald-300">Free</span>}
       </td>

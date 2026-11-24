@@ -19,6 +19,7 @@ import PosLayout from './pages/admin/PosLayout';
 import EmailSettings from './pages/admin/EmailSettings';
 import DineIn from './pages/admin/DineIn';
 import CashDrawer from './pages/admin/CashDrawer';
+import FloorPlan from './pages/admin/FloorPlan';
 
 function Protected({ role, children }) {
   const { user } = useAuth();
@@ -49,6 +50,7 @@ export default function App() {
             <Route path="settings/pos-layout" element={<PosLayout />} />
             <Route path="settings/email" element={<EmailSettings />} />
             <Route path="dine-in" element={<DineIn />} />
+            <Route path="floor" element={<FloorPlan />} />
             <Route path="drawer" element={<CashDrawer />} />
           </Route>
           <Route path="*" element={<Navigate to="/login" replace />} />
