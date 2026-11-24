@@ -1,7 +1,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
-import { BarChart3, Boxes, CalendarDays, FileSpreadsheet, FileText, Receipt, Sheet, ShoppingBasket, TrendingUp, Wallet } from 'lucide-react';
+import { BarChart3, Boxes, CalendarDays, FileSpreadsheet, FileText, Receipt, Sheet, ShoppingBasket, Tags, TrendingUp, Vault, Wallet } from 'lucide-react';
 import { api, download } from '../../lib/api';
 import { endOfDay, endOfMonth, fromInput, rangeQuery, startOfDay, startOfMonth, toInputDate, toInputMonth } from '../../lib/dates';
 import { useSettings } from '../../context/SettingsContext';
@@ -13,6 +13,8 @@ const REPORTS = [
   { type: 'daily', title: 'Day-wise Summary', desc: 'Sales totals grouped per day — ideal for monthly reports', icon: CalendarDays, color: '#10b981' },
   { type: 'sales', title: 'Product Sales List', desc: 'Quantity, revenue, cost and profit per product', icon: ShoppingBasket, color: '#f59e0b' },
   { type: 'stock', title: 'Stock Report', desc: 'Current stock levels and inventory value (live)', icon: Boxes, color: '#ec4899' },
+  { type: 'categories', title: 'Category Sales', desc: 'Orders, quantity and sales share per category', icon: Tags, color: '#06b6d4' },
+  { type: 'drawer', title: 'Cash Drawer Log', desc: 'Every drawer open: time, reason, cashier and invoice', icon: Vault, color: '#ef4444' },
 ];
 const FORMATS = [
   { id: 'xlsx', label: 'Excel', icon: FileSpreadsheet },

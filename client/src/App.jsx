@@ -14,6 +14,11 @@ import Promotions from './pages/admin/Promotions';
 import Users from './pages/admin/Users';
 import Settings from './pages/admin/Settings';
 import PaymentSettings from './pages/admin/PaymentSettings';
+import PrinterSettings from './pages/admin/PrinterSettings';
+import PosLayout from './pages/admin/PosLayout';
+import EmailSettings from './pages/admin/EmailSettings';
+import DineIn from './pages/admin/DineIn';
+import CashDrawer from './pages/admin/CashDrawer';
 
 function Protected({ role, children }) {
   const { user } = useAuth();
@@ -40,6 +45,11 @@ export default function App() {
             <Route path="users" element={<Users />} />
             <Route path="settings" element={<Settings />} />
             <Route path="settings/payments" element={<PaymentSettings />} />
+            <Route path="settings/printer" element={<PrinterSettings />} />
+            <Route path="settings/pos-layout" element={<PosLayout />} />
+            <Route path="settings/email" element={<EmailSettings />} />
+            <Route path="dine-in" element={<DineIn />} />
+            <Route path="drawer" element={<CashDrawer />} />
           </Route>
           <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>

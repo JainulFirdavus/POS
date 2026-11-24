@@ -6,6 +6,7 @@ import { getSocket } from '../../lib/socket';
 import { useSettings } from '../../context/SettingsContext';
 import { useToast } from '../../context/ToastContext';
 import Modal from '../../components/Modal';
+import { METHOD_LABELS } from '../../components/PaymentModal';
 import { PrintPortal, ReceiptPaper } from '../../components/Receipt';
 import { Empty, Field, PageHeader } from '../../components/ui';
 
@@ -73,11 +74,14 @@ export default function Invoices() {
           <tbody>
             {list.map((inv, i) => (
               <tr key={inv._id} onClick={() => setSelected(inv)} className="animate-pop-in cursor-pointer border-b border-white/5 transition-colors hover:bg-white/[0.03]" style={{ animationDelay: `${Math.min(i, 20) * 15}ms` }}>
-                <td className="td font-mono font-medium">{inv.number}</td>
+                <td className="td font-mono font-medium">
+                  {inv.number}
+                  <span className={`ml-2 rounded px-1.5 py-0.5 font-sans text-[10px] font-semibold ${inv.orderType === 'dine-in' ? 'bg-amber-500/15 text-amber-300' : 'bg-white/5 text-slate-400'}`}>{inv.orderType === 'dine-in' ? `Dine-in${inv.table ? ` · ${inv.table}` : ''}` : 'Takeaway'}</span>
+                </td>
                 <td className="td text-slate-400">{fmtDateTime(inv.createdAt)}</td>
                 <td className="td">{inv.cashier?.name}</td>
                 <td className="td text-center">{inv.items.reduce((s, l) => s + l.qty, 0)}</td>
-                <td className="td uppercase text-slate-400">{inv.paymentMethod}</td>
+                <td className="td text-slate-400">{METHOD_LABELS[inv.paymentMethod] ?? inv.paymentMethod}</td>
                 <td className="td text-right font-semibold">{money(inv.total)}</td>
                 <td className="td">
                   <span className={`rounded-md px-2 py-0.5 text-xs font-bold ${inv.status === 'paid' ? 'bg-emerald-500/15 text-emerald-300' : 'bg-rose-500/15 text-rose-300'}`}>{inv.status.toUpperCase()}</span>

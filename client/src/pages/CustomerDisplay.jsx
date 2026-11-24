@@ -88,7 +88,7 @@ function Ticker({ text }) {
   );
 }
 
-function OrderPanel({ cart, money }) {
+function OrderPanel({ cart, money, taxLabel }) {
   return (
     <motion.aside
       initial={{ x: 80, opacity: 0 }}
@@ -129,7 +129,7 @@ function OrderPanel({ cart, money }) {
       <div className="space-y-2 border-t border-white/5 px-6 py-5 text-lg">
         <div className="flex justify-between text-slate-400"><span>Subtotal</span><span className="tabular-nums">{money(cart.subtotal)}</span></div>
         {cart.discount > 0 && <div className="flex justify-between text-emerald-400"><span>You save</span><span className="tabular-nums">-{money(cart.discount)}</span></div>}
-        <div className="flex justify-between text-slate-400"><span>Tax ({cart.taxRate}%)</span><span className="tabular-nums">{money(cart.tax)}</span></div>
+        {cart.taxRate > 0 && <div className="flex justify-between text-slate-400"><span>{taxLabel || 'Tax'} ({cart.taxRate}%)</span><span className="tabular-nums">{money(cart.tax)}</span></div>}
         <div className="flex items-baseline justify-between rounded-2xl bg-gradient-to-r from-indigo-600 to-violet-600 px-5 py-4">
           <span className="text-2xl font-semibold">Total</span>
           <AnimatedNumber value={cart.total} format={money} className="text-5xl font-black tabular-nums" />
@@ -205,13 +205,28 @@ export default function CustomerDisplay() {
         <motion.section layout transition={{ type: 'spring', stiffness: 200, damping: 30 }} className="min-w-0 flex-1">
           <PromoCarousel promos={promos} storeName={settings.storeName} compact={hasItems} />
         </motion.section>
-        <AnimatePresence>{hasItems && <OrderPanel cart={cart} money={money} />}</AnimatePresence>
+        <AnimatePresence>{hasItems && <OrderPanel cart={cart} money={money} taxLabel={settings.taxLabel} />}</AnimatePresence>
       </div>
 
       <Ticker text={settings.ticker} />
 
       <AnimatePresence>
-        {message && (
+        {message?.kind === 'qr' && settings.qrImage ? (
+          <motion.div
+            key={message.id}
+            className="absolute inset-0 z-20 grid place-items-center bg-slate-950/90"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} className="flex flex-col items-center rounded-3xl bg-white p-8 text-slate-900 shadow-2xl">
+              <div className="text-3xl font-black">{message.text}</div>
+              <img src={settings.qrImage} alt="DuitNow QR code" className="my-6 h-[50vh] max-h-[480px] w-auto object-contain" />
+              <div className="text-xl text-slate-500">Amount to pay</div>
+              <div className="text-5xl font-black tabular-nums">{money(message.amount)}</div>
+            </motion.div>
+          </motion.div>
+        ) : message && (
           <motion.div
             key={message.id}
             initial={{ y: -120, opacity: 0 }}

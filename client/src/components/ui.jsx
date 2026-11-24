@@ -49,7 +49,7 @@ export function Toggle({ checked, onChange, label }) {
   return (
     <button type="button" role="switch" aria-checked={checked} onClick={() => onChange(!checked)} className="flex items-center gap-3">
       <span className={`relative flex h-6 w-11 items-center rounded-full px-0.5 transition-colors ${checked ? 'justify-end bg-emerald-500' : 'justify-start bg-slate-700'}`}>
-        <motion.span layout transition={{ type: 'spring', stiffness: 700, damping: 35 }} className="h-5 w-5 rounded-full bg-white shadow" />
+        <motion.span layout transition={{ type: 'spring', stiffness: 700, damping: 35 }} className="h-5 w-5 rounded-full bg-paper shadow" />
       </span>
       {label && <span className="text-sm">{label}</span>}
     </button>
@@ -64,7 +64,7 @@ export function Segmented({ id, value, onChange, options }) {
           key={o.value}
           type="button"
           onClick={() => onChange(o.value)}
-          className={`relative rounded-lg px-4 py-1.5 text-sm font-medium transition-colors ${value === o.value ? 'text-white' : 'text-slate-400 hover:text-slate-200'}`}
+          className={`relative rounded-lg px-4 py-1.5 text-sm font-medium transition-colors ${value === o.value ? 'text-on-accent' : 'text-slate-400 hover:text-slate-200'}`}
         >
           {value === o.value && (
             <motion.span layoutId={`seg-${id}`} className="absolute inset-0 rounded-lg bg-indigo-500" transition={{ type: 'spring', stiffness: 500, damping: 35 }} />
@@ -83,6 +83,15 @@ export function Empty({ icon: Icon, text }) {
       <p className="text-sm">{text}</p>
     </div>
   );
+}
+
+// Text colour (near-black or white) that stays readable on a given background colour, e.g. a user's avatar colour.
+export function onColor(hex) {
+  const m = /^#?([0-9a-f]{6})$/i.exec(String(hex ?? ''));
+  if (!m) return '#fff';
+  const [r, g, b] = [0, 2, 4].map((i) => parseInt(m[1].slice(i, i + 2), 16) / 255).map((v) => (v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4));
+  const L = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  return (L + 0.05) / 0.05 > 1.05 / (L + 0.05) ? '#0f172a' : '#fff';
 }
 
 export const COLORS = ['#6366f1', '#8b5cf6', '#ec4899', '#ef4444', '#f59e0b', '#10b981', '#06b6d4', '#3b82f6', '#84cc16', '#f97316'];

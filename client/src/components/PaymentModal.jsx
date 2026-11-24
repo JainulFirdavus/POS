@@ -5,21 +5,27 @@ import Modal from './Modal';
 import AnimatedNumber from './AnimatedNumber';
 import { useSettings } from '../context/SettingsContext';
 import { getSocket } from '../lib/socket';
+import { round2, roundTo5Sen } from '../lib/dates';
 
 export const METHODS = [
-  { id: 'cash', label: 'Cash', icon: Banknote, color: '#10b981' },
+  { id: 'cash', label: 'Cash', icon: Banknote, color: '#059669' },
   { id: 'card', label: 'Card', icon: CreditCard, color: '#6366f1' },
-  { id: 'upi', label: 'UPI / QR', icon: QrCode, color: '#f59e0b' },
+  { id: 'qr', label: 'DuitNow QR', icon: QrCode, color: '#ec4899' },
 ];
+export const METHOD_LABELS = Object.fromEntries(METHODS.map((m) => [m.id, m.label]));
 const KEYS = ['7', '8', '9', '4', '5', '6', '1', '2', '3', '.', '0', 'del'];
-const CUSTOMER_PROMPT = { card: 'Please insert or tap your card', upi: 'Please scan the QR code to pay' };
+const CUSTOMER_PROMPT = { card: 'Please insert or tap your card', qr: 'Scan the DuitNow QR to pay' };
 
-export default function PaymentModal({ open, onClose, total, initialMethod = 'cash', onComplete }) {
+export default function PaymentModal({ open, onClose, total: exactTotal, initialMethod = 'cash', onComplete }) {
   const { money, settings } = useSettings();
-  const methods = METHODS.filter((item) => (settings.paymentMethods ?? { cash: true, card: true, upi: true })[item.id]);
+  const methods = METHODS.filter((item) => (settings.paymentMethods ?? { cash: true, card: true, qr: true })[item.id]);
   const [method, setMethod] = useState(initialMethod);
   const [tendered, setTendered] = useState('');
   const [busy, setBusy] = useState(false);
+
+  // Cash totals follow Bank Negara's 5-sen rounding; card and QR are charged the exact amount.
+  const total = method === 'cash' && settings.cashRounding !== false ? roundTo5Sen(exactTotal) : exactTotal;
+  const rounding = round2(total - exactTotal);
 
   useEffect(() => {
     if (!open) return;
@@ -29,15 +35,21 @@ export default function PaymentModal({ open, onClose, total, initialMethod = 'ca
   }, [open, initialMethod, settings.paymentMethods]);
 
   useEffect(() => {
-    if (open && CUSTOMER_PROMPT[method]) getSocket().emit('display:message', { text: CUSTOMER_PROMPT[method], duration: 15000 });
-  }, [open, method]);
+    if (!open || !CUSTOMER_PROMPT[method]) return;
+    const socket = getSocket();
+    socket.emit('display:message', method === 'qr'
+      ? { text: CUSTOMER_PROMPT.qr, duration: 120000, kind: 'qr', amount: total }
+      : { text: CUSTOMER_PROMPT[method], duration: 15000 });
+    // Clear the prompt when the cashier switches method or closes the payment window.
+    return () => socket.emit('display:message', { text: '' });
+  }, [open, method, total]);
 
   const paid = method === 'cash' ? Number(tendered || 0) : total;
   const change = Math.max(0, paid - total);
   const canPay = !busy && (method !== 'cash' || paid >= total - 0.001);
 
   const quick = useMemo(
-    () => [...new Set([total, ...[10, 50, 100, 500, 2000].map((n) => Math.ceil(total / n) * n)])].filter((v) => v > 0).slice(0, 5),
+    () => [...new Set([total, ...[5, 10, 50, 100].map((n) => Math.ceil(total / n) * n)])].filter((v) => v > 0).slice(0, 5),
     [total],
   );
 
@@ -80,7 +92,7 @@ export default function PaymentModal({ open, onClose, total, initialMethod = 'ca
               <button
                 key={m.id}
                 onClick={() => setMethod(m.id)}
-                className={`relative flex flex-col items-center gap-1.5 rounded-xl py-3 text-sm font-semibold transition-colors ${method === m.id ? 'text-white' : 'bg-slate-800/60 text-slate-400 hover:text-slate-200'}`}
+                className={`relative flex flex-col items-center gap-1.5 rounded-xl py-3 text-sm font-semibold transition-colors ${method === m.id ? 'text-on-accent' : 'bg-slate-800/60 text-slate-400 hover:text-slate-200'}`}
               >
                 {method === m.id && (
                   <motion.span layoutId="pay-method" className="absolute inset-0 rounded-xl" style={{ background: m.color }} transition={{ type: 'spring', stiffness: 500, damping: 35 }} />
@@ -96,6 +108,12 @@ export default function PaymentModal({ open, onClose, total, initialMethod = 'ca
               <span className="text-slate-400">Amount due</span>
               <span className="text-3xl font-black">{money(total)}</span>
             </div>
+            {rounding !== 0 && (
+              <div className="flex items-baseline justify-between text-sm text-slate-400">
+                <span>Rounding (to 5 sen)</span>
+                <span className="tabular-nums">{rounding > 0 ? '+' : '-'}{money(Math.abs(rounding))}</span>
+              </div>
+            )}
             {method === 'cash' && (
               <>
                 <div className="flex items-baseline justify-between">

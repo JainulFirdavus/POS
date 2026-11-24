@@ -7,7 +7,7 @@ import { api } from '../../lib/api';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 import Modal from '../../components/Modal';
-import { ColorPicker, Empty, Field, PageHeader, Toggle } from '../../components/ui';
+import { ColorPicker, Empty, Field, PageHeader, Toggle, onColor } from '../../components/ui';
 
 const EMPTY = { name: '', username: '', role: 'cashier', secret: '', color: '#10b981', active: true };
 
@@ -37,8 +37,8 @@ function UserForm({ open, user, onClose, onSaved }) {
     <Modal open={open} onClose={onClose} title={user ? 'Edit User' : 'New User'} footer={<button className="btn btn-primary" form="user-form">Save</button>}>
       <form id="user-form" onSubmit={save} className="space-y-4">
         <div className="grid grid-cols-2 gap-2">
-          {[['cashier', 'Seller', ShoppingCart, 'bg-emerald-500'], ['admin', 'Admin', ShieldCheck, 'bg-indigo-500']].map(([id, label, Icon, bg]) => (
-            <button key={id} type="button" onClick={() => setF({ ...f, role: id, secret: '' })} className={`relative flex items-center justify-center gap-2 rounded-xl py-3 text-sm font-semibold ${f.role === id ? 'text-white' : 'bg-slate-800 text-slate-400'}`}>
+          {[['cashier', 'Seller', ShoppingCart, 'bg-emerald-600'], ['admin', 'Admin', ShieldCheck, 'bg-indigo-500']].map(([id, label, Icon, bg]) => (
+            <button key={id} type="button" onClick={() => setF({ ...f, role: id, secret: '' })} className={`relative flex items-center justify-center gap-2 rounded-xl py-3 text-sm font-semibold ${f.role === id ? 'text-on-accent' : 'bg-slate-800 text-slate-400'}`}>
               {f.role === id && <motion.span layoutId="role-pill" className={`absolute inset-0 rounded-xl ${bg}`} />}
               <Icon size={16} className="relative" /> <span className="relative">{label}</span>
             </button>
@@ -97,7 +97,7 @@ export default function Users() {
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {users.map((u, i) => (
           <motion.div key={u._id} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.04 }} className={`card flex items-center gap-4 p-5 ${u.active ? '' : 'opacity-50'}`}>
-            <div className="grid h-12 w-12 shrink-0 place-items-center rounded-full text-lg font-bold" style={{ background: u.color }}>{u.name[0]}</div>
+            <div className="grid h-12 w-12 shrink-0 place-items-center rounded-full text-lg font-bold" style={{ background: u.color, color: onColor(u.color) }}>{u.name[0]}</div>
             <div className="min-w-0 flex-1">
               <div className="truncate font-semibold">{u.name} {u._id === me.id && <span className="text-xs text-slate-500">(you)</span>}</div>
               <div className="text-xs text-slate-500">@{u.username}</div>

@@ -6,7 +6,7 @@ import { getSocket } from '../lib/socket';
 const SettingsContext = createContext(null);
 
 export function SettingsProvider({ children }) {
-  const [settings, setSettings] = useState({ storeName: 'Smart POS', currency: 'INR', taxRate: 0, ticker: '' });
+  const [settings, setSettings] = useState({ storeName: 'Smart POS', currency: 'MYR', taxRate: 0, taxLabel: 'SST', cashRounding: true, ticker: '' });
 
   const reload = useCallback(() => api('/settings').then(setSettings).catch(() => {}), []);
 
@@ -20,7 +20,9 @@ export function SettingsProvider({ children }) {
   const money = useMemo(() => {
     let f;
     try {
-      f = new Intl.NumberFormat(undefined, { style: 'currency', currency: settings.currency || 'INR' });
+      const currency = settings.currency || 'MYR';
+      // en-MY prints ringgit as "RM 12.50" (other locales would print "MYR 12.50").
+      f = new Intl.NumberFormat(currency === 'MYR' ? 'en-MY' : undefined, { style: 'currency', currency });
     } catch {
       f = new Intl.NumberFormat(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     }

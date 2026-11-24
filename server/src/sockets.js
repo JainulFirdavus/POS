@@ -31,6 +31,8 @@ export function setupSockets(io) {
       'display:message',
       authed((data) => {
         const msg = { text: String(data.text ?? '').slice(0, 200), duration: Math.min(Number(data.duration) || 8000, 120000) };
+        // A QR prompt asks the customer display to show the shop's DuitNow QR with the amount due.
+        if (data.kind === 'qr' && Number.isFinite(Number(data.amount))) Object.assign(msg, { kind: 'qr', amount: Number(data.amount) });
         (data.broadcast && socket.user.role === 'admin' ? socket.broadcast : socket.to(room)).emit('display:message', msg);
       }),
     );

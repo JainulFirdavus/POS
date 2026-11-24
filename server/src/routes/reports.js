@@ -1,11 +1,13 @@
 
 import { Router } from 'express';
-import { Category, Invoice, Product } from '../models.js';
+import { Category, DrawerEvent, Invoice, Product } from '../models.js';
 import { auth, adminOnly } from '../middleware/auth.js';
 import { HttpError, round2 } from '../utils.js';
 import { sendReport } from '../exporters.js';
+import { buildSummary, grouped, paidIn, salesByCategory, salesByProduct } from '../stats.js';
 
 const r = Router();
+const PAYMENT_LABELS = { cash: 'Cash', card: 'Card', qr: 'DuitNow QR' };
 r.use(auth, adminOnly);
 
 function parseRange(q) {
@@ -22,83 +24,9 @@ function parseRange(q) {
   return { from, to, tz };
 }
 
-const paidIn = (from, to) => ({ status: 'paid', createdAt: { $gte: from, $lte: to } });
-
-function salesByProduct(match) {
-  return Invoice.aggregate([
-    { $match: match },
-    { $unwind: '$items' },
-    {
-      $group: {
-        _id: { $ifNull: ['$items.product', { $concat: ['custom:', '$items.name'] }] },
-        name: { $last: '$items.name' },
-        sku: { $last: '$items.sku' },
-        qty: { $sum: '$items.qty' },
-        revenue: { $sum: '$items.total' },
-        cost: { $sum: { $multiply: [{ $ifNull: ['$items.cost', 0] }, '$items.qty'] } },
-      },
-    },
-    { $sort: { revenue: -1 } },
-  ]);
-}
-
-function grouped(match, format, tz) {
-  return Invoice.aggregate([
-    { $match: match },
-    {
-      $group: {
-        _id: { $dateToString: { format, date: '$createdAt', timezone: tz } },
-        invoices: { $sum: 1 },
-        items: { $sum: { $sum: '$items.qty' } },
-        subtotal: { $sum: '$subtotal' },
-        discount: { $sum: '$discount' },
-        tax: { $sum: '$tax' },
-        revenue: { $sum: '$total' },
-      },
-    },
-    { $sort: { _id: 1 } },
-  ]);
-}
-
 r.get('/summary', async (req, res) => {
   const { from, to, tz } = parseRange(req.query);
-  const match = paidIn(from, to);
-  const days = (to - from) / 864e5;
-  const fmt = days <= 1.01 ? '%H:00' : days > 62 ? '%Y-%m' : '%Y-%m-%d';
-
-  const [series, products, payments, lowStock] = await Promise.all([
-    grouped(match, fmt, tz),
-    salesByProduct(match),
-    Invoice.aggregate([
-      { $match: match },
-      { $group: { _id: '$paymentMethod', total: { $sum: '$total' }, count: { $sum: 1 } } },
-    ]),
-    Product.find({ active: true, $expr: { $lte: ['$stock', '$lowStock'] } })
-      .select('name emoji stock lowStock')
-      .sort({ stock: 1 })
-      .limit(10)
-      .lean(),
-  ]);
-
-  const sum = (arr, k) => round2(arr.reduce((s, x) => s + (x[k] || 0), 0));
-  const revenue = sum(series, 'revenue');
-  const count = sum(series, 'invoices');
-  const discount = sum(series, 'discount');
-  res.json({
-    totals: {
-      revenue,
-      count,
-      items: sum(series, 'items'),
-      tax: sum(series, 'tax'),
-      discount,
-      avg: count ? round2(revenue / count) : 0,
-      profit: round2(sum(products, 'revenue') - sum(products, 'cost') - discount),
-    },
-    series: series.map((s) => ({ label: s._id, revenue: round2(s.revenue), invoices: s.invoices })),
-    topProducts: products.slice(0, 8).map((p) => ({ ...p, revenue: round2(p.revenue) })),
-    payments: payments.map((p) => ({ method: p._id, total: round2(p.total), count: p.count })),
-    lowStock,
-  });
+  res.json(await buildSummary(from, to, tz));
 });
 
 r.get('/export', async (req, res) => {
@@ -138,7 +66,7 @@ r.get('/export', async (req, res) => {
         discount: i.discount,
         tax: i.tax,
         total: i.total,
-        payment: i.paymentMethod?.toUpperCase(),
+        payment: PAYMENT_LABELS[i.paymentMethod] ?? i.paymentMethod,
         status: i.status.toUpperCase(),
       })),
       totals: {
@@ -223,6 +151,49 @@ r.get('/export', async (req, res) => {
       ],
       rows,
       totals: { name: 'TOTAL', stock: total('stock'), value: total('value'), retail: total('retail') },
+    };
+  } else if (type === 'categories') {
+    const rows = await salesByCategory(paidIn(from, to));
+    const total = (k) => round2(rows.reduce((s, x) => s + x[k], 0));
+    report = {
+      title: 'Category Sales Report',
+      columns: [
+        { header: 'Category', key: 'name', width: 26 },
+        { header: 'Orders', key: 'orders', width: 10, type: 'number' },
+        { header: 'Qty Sold', key: 'qty', width: 10, type: 'number' },
+        { header: 'Item Sales', key: 'revenue', width: 14, type: 'money' },
+        { header: 'Share %', key: 'share', width: 10, type: 'number' },
+      ],
+      rows: rows.map((x) => ({ ...x, share: total('revenue') ? round2((x.revenue / total('revenue')) * 100) : 0 })),
+      totals: { name: 'TOTAL', qty: total('qty'), revenue: total('revenue') },
+    };
+  } else if (type === 'drawer') {
+    const events = await DrawerEvent.find({ createdAt: { $gte: from, $lte: to } }).sort({ createdAt: 1 }).lean();
+    const REASONS = { sale: 'Cash sale', 'no-sale': 'No sale (manual)', test: 'Test' };
+    report = {
+      title: 'Cash Drawer Log',
+      columns: [
+        { header: 'Date', key: 'date', width: 16 },
+        { header: 'Reason', key: 'reason', width: 16 },
+        { header: 'By', key: 'user', width: 14 },
+        { header: 'Invoice #', key: 'invoice', width: 20 },
+        { header: 'Amount', key: 'amount', width: 11, type: 'money' },
+        { header: 'Note', key: 'note', width: 26 },
+        { header: 'Status', key: 'status', width: 14 },
+      ],
+      rows: events.map((e) => ({
+        date: dateTime.format(e.createdAt),
+        reason: REASONS[e.reason] ?? e.reason,
+        user: e.user?.name,
+        invoice: e.invoiceNumber,
+        amount: e.amount,
+        note: e.note,
+        status: e.ok ? 'Opened' : `Failed: ${e.error ?? ''}`.slice(0, 60),
+      })),
+      totals: {
+        date: `TOTAL ${events.length} opens`,
+        reason: `${events.filter((e) => e.reason === 'no-sale').length} no-sale`,
+      },
     };
   } else {
     throw new HttpError(400, 'Unknown report type');

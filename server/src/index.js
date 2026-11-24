@@ -9,6 +9,7 @@ import { Server } from 'socket.io';
 import { PORT } from './config.js';
 import { connectDB } from './db.js';
 import { seedIfEmpty } from './seed.js';
+import { migrate } from './migrate.js';
 import { setupSockets } from './sockets.js';
 import authRoutes from './routes/auth.js';
 import userRoutes from './routes/users.js';
@@ -18,6 +19,11 @@ import invoiceRoutes from './routes/invoices.js';
 import reportRoutes from './routes/reports.js';
 import promotionRoutes from './routes/promotions.js';
 import settingsRoutes from './routes/settings.js';
+import hardwareRoutes from './routes/hardware.js';
+import rfidRoutes from './routes/rfid.js';
+import tabRoutes from './routes/tabs.js';
+import mailRoutes from './routes/mail.js';
+import { startDailyReportScheduler } from './dailyReport.js';
 
 const app = express();
 const server = http.createServer(app);
@@ -41,6 +47,10 @@ app.use('/api/invoices', invoiceRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/promotions', promotionRoutes);
 app.use('/api/settings', settingsRoutes);
+app.use('/api/hardware', hardwareRoutes);
+app.use('/api/rfid', rfidRoutes);
+app.use('/api/tabs', tabRoutes);
+app.use('/api/mail', mailRoutes);
 app.use('/api', (_req, res) => res.status(404).json({ error: 'Not found' }));
 
 const dist = path.resolve(import.meta.dirname, '../../client/dist');
@@ -63,10 +73,12 @@ app.use((err, _req, res, _next) => {
 
 setupSockets(io);
 await connectDB();
+await migrate();
 await seedIfEmpty();
 await new Promise((resolve, reject) => {
   server.once('error', reject);
   server.listen(PORT, resolve);
 });
 console.log(`Smart POS server running on http://localhost:${PORT}`);
+startDailyReportScheduler();
  

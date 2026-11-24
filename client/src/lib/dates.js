@@ -39,3 +39,6 @@ export function presetRange(id) {
 
 export const fmtDateTime = (d) => new Date(d).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
 export const round2 = (n) => Math.round((Number(n) + Number.EPSILON) * 100) / 100;
+
+// Same rule as the server: Bank Negara Malaysia's rounding of the bill total to the nearest 5 sen.
+export const roundTo5Sen = (n) => (Math.round(Math.round(Number(n) * 100) / 5) * 5) / 100;

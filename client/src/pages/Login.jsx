@@ -6,6 +6,7 @@ import { Navigate } from 'react-router-dom';
 import { ArrowLeft, Check, Delete, Eye, EyeOff, Lock, Monitor, ShieldCheck, ShoppingCart, User } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useSettings } from '../context/SettingsContext';
+import { onColor } from '../components/ui';
 import { api } from '../lib/api';
 import Clock from '../components/Clock';
 
@@ -14,10 +15,10 @@ const SHAKE = { x: [0, -14, 14, -10, 10, -4, 0], transition: { duration: 0.45 } 
 function Background() {
   return (
     <div className="pointer-events-none absolute inset-0 overflow-hidden">
-      <div className="absolute -left-40 -top-40 h-[36rem] w-[36rem] animate-blob rounded-full bg-[radial-gradient(circle,rgba(99,102,241,0.35),transparent_65%)]" />
+      <div className="absolute -left-40 -top-40 h-[36rem] w-[36rem] animate-blob rounded-full bg-[radial-gradient(circle,color-mix(in_oklab,var(--color-indigo-500)_35%,transparent),transparent_65%)]" />
       <div className="absolute -bottom-48 -right-40 h-[40rem] w-[40rem] animate-blob rounded-full bg-[radial-gradient(circle,rgba(16,185,129,0.28),transparent_65%)] [animation-delay:-6s]" />
       <div className="absolute left-1/3 top-1/2 h-[28rem] w-[28rem] animate-blob rounded-full bg-[radial-gradient(circle,rgba(236,72,153,0.2),transparent_65%)] [animation-delay:-12s]" />
-      <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:48px_48px]" />
+      <div className="absolute inset-0 bg-[linear-gradient(color-mix(in_oklab,var(--color-white)_4%,transparent)_1px,transparent_1px),linear-gradient(90deg,color-mix(in_oklab,var(--color-white)_4%,transparent)_1px,transparent_1px)] bg-[size:48px_48px]" />
     </div>
   );
 }
@@ -93,7 +94,7 @@ function SellerLogin() {
                   }}
                   className="flex flex-col items-center gap-3 rounded-2xl border border-white/5 bg-slate-800/50 p-5 transition-colors hover:border-white/20 hover:bg-slate-800"
                 >
-                  <div className="grid h-14 w-14 place-items-center rounded-full text-xl font-bold text-white shadow-lg" style={{ background: s.color }}>
+                  <div className="grid h-14 w-14 place-items-center rounded-full text-xl font-bold shadow-lg" style={{ background: s.color, color: onColor(s.color) }}>
                     {s.name[0]?.toUpperCase()}
                   </div>
                   <span className="font-semibold">{s.name}</span>
@@ -109,7 +110,7 @@ function SellerLogin() {
               <ArrowLeft size={16} /> Change user
             </button>
             <div className="mb-5 flex items-center gap-3">
-              <div className="grid h-12 w-12 place-items-center rounded-full text-lg font-bold" style={{ background: selected.color }}>
+              <div className="grid h-12 w-12 place-items-center rounded-full text-lg font-bold" style={{ background: selected.color, color: onColor(selected.color) }}>
                 {selected.name[0]?.toUpperCase()}
               </div>
               <div>
@@ -135,7 +136,7 @@ function SellerLogin() {
                   onClick={() => press(k)}
                   disabled={busy}
                   className={`grid h-14 place-items-center rounded-xl text-xl font-semibold transition duration-100 active:scale-90 ${
-                    k === 'ok' ? 'bg-emerald-500 text-white hover:bg-emerald-400' : k === 'del' ? 'bg-white/5 text-slate-300 hover:bg-white/10' : 'bg-slate-800 hover:bg-slate-700'
+                    k === 'ok' ? 'bg-emerald-600 text-on-accent hover:bg-emerald-700' : k === 'del' ? 'bg-white/5 text-slate-300 hover:bg-white/10' : 'bg-slate-800 hover:bg-slate-700'
                   }`}
                 >
                   {k === 'del' ? <Delete size={20} /> : k === 'ok' ? <Check size={22} /> : k}
@@ -212,7 +213,7 @@ function AdminLogin() {
 }
 
 const TABS = [
-  { id: 'seller', label: 'Seller', icon: ShoppingCart, color: 'bg-emerald-500' },
+  { id: 'seller', label: 'Seller', icon: ShoppingCart, color: 'bg-emerald-600' },
   { id: 'admin', label: 'Admin', icon: ShieldCheck, color: 'bg-indigo-500' },
 ];
 
@@ -224,7 +225,7 @@ export default function Login() {
   if (user) return <Navigate to={user.role === 'admin' ? '/admin' : '/pos'} replace />;
 
   return (
-    <motion.div className="relative flex h-full items-center justify-center overflow-hidden p-6" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+    <motion.div data-theme={settings.sellerTheme || 'midnight'} className="pos-themed relative flex h-full items-center justify-center overflow-hidden p-6" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
       <Background />
       <div className="relative z-10 grid w-full max-w-5xl items-center gap-10 md:grid-cols-2">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="hidden md:block">
@@ -251,7 +252,7 @@ export default function Login() {
         >
           <div className="mb-6 grid grid-cols-2 rounded-2xl bg-slate-950/70 p-1.5">
             {TABS.map((t) => (
-              <button key={t.id} onClick={() => setMode(t.id)} className={`relative flex items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-semibold transition-colors ${mode === t.id ? 'text-white' : 'text-slate-400 hover:text-slate-200'}`}>
+              <button key={t.id} onClick={() => setMode(t.id)} className={`relative flex items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-semibold transition-colors ${mode === t.id ? 'text-on-accent' : 'text-slate-400 hover:text-slate-200'}`}>
                 {mode === t.id && <motion.span layoutId="login-tab" className={`absolute inset-0 rounded-xl ${t.color}`} transition={{ type: 'spring', stiffness: 500, damping: 35 }} />}
                 <t.icon size={16} className="relative" />
                 <span className="relative">{t.label} Login</span>
